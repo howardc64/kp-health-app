@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaiser Permanente Health Records</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #00677F;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .login-section {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        
+        .login-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2rem;
+        }
+        
+        .login-section p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .btn {
+            background: #00677F;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .btn:hover {
+            background: #005566;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,103,127,0.3);
+        }
+        
+        .btn-secondary {
+            background: #666;
+            margin-left: 10px;
+        }
+        
+        .btn-secondary:hover {
+            background: #555;
+        }
+        
+        .patient-info {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .patient-info h2 {
+            color: #00677F;
+            margin-bottom: 15px;
+        }
+        
+        .patient-info p {
+            color: #333;
+            margin: 8px 0;
+            font-size: 1.05rem;
+        }
+        
+        .patient-info strong {
+            color: #00677F;
+            display: inline-block;
+            min-width: 120px;
+        }
+        
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        
+        .card:hover {
+            border-color: #00677F;
+            box-shadow: 0 5px 15px rgba(0,103,127,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .card h3 {
+            color: #00677F;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .card h3::before {
+            content: '●';
+            color: #00677F;
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
+        
+        .card ul {
+            list-style: none;
+        }
+        
+        .card li {
+            padding: 8px 0;
+            color: #555;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .card li:last-child {
+            border-bottom: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #00677F;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #fcc;
+        }
+        
+        .success {
+            background: #efe;
+            color: #3c3;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #cfc;
+        }
+        
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+            font-style: italic;
+        }
+        
+        .badge {
+            display: inline-block;
+            background: #00677F;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Kaiser Permanente Health Records</h1>
+            <p>Securely access your health information</p>
+        </div>
+        
+        <div class="content">
+            <!-- Login Section -->
+            <div id="loginSection" class="login-section">
+                <h2>Access Your Health Records</h2>
+                <p>Connect to your Kaiser Permanente account to view your medications, allergies, lab results, and more.</p>
+                <button class="btn" onclick="login()">🔐 Login with Kaiser Permanente</button>
+                
+                <div style="margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <h3 style="color: #00677F; margin-bottom: 15px;">Before You Begin</h3>
+                    <ul style="text-align: left; max-width: 600px; margin: 0 auto; color: #666;">
+                        <li style="margin: 10px 0;">✓ You need an active Kaiser Permanente membership</li>
+                        <li style="margin: 10px 0;">✓ Your application must be registered with Kaiser Permanente</li>
+                        <li style="margin: 10px 0;">✓ Update the CLIENT_ID in the code with your registered ID</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Loading Section -->
+            <div id="loadingSection" style="display: none;">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading your health records...</p>
+                </div>
+            </div>
+            
+            <!-- Dashboard Section -->
+            <div id="dashboardSection" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <h2 style="color: #00677F; font-size: 2rem;">My Health Dashboard</h2>
+                    <button class="btn btn-secondary" onclick="logout()">Logout</button>
+                </div>
+                
+                <!-- Patient Information -->
+                <div id="patientInfo" class="patient-info"></div>
+                
+                <!-- Health Data Cards -->
+                <div class="cards-grid">
+                    <div class="card">
+                        <h3>Allergies</h3>
+                        <div id="allergiesList"></div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>Active Medications</h3>
+                        <div id="medicationsList"></div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>Conditions</h3>
+                        <div id="conditionsList"></div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>Recent Vital Signs</h3>
+                        <div id="vitalsList"></div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>Immunizations</h3>
+                        <div id="immunizationsList"></div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>Recent Lab Results</h3>
+                        <div id="labsList"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Error Section -->
+            <div id="errorSection" style="display: none;">
+                <div class="error">
+                    <strong>Error:</strong> <span id="errorMessage"></span>
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="btn" onclick="retry()">Try Again</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="kaiser_permanente_fhir_client.js"></script>
+    <script>
+        // Configuration - UPDATE WITH YOUR CLIENT ID
+        const CLIENT_ID = 'your_client_id_here';
+        const REDIRECT_URI = window.location.origin + window.location.pathname;
+        
+        let client = null;
+        
+        // Initialize
+        window.addEventListener('DOMContentLoaded', async () => {
+            if (CLIENT_ID === 'your_client_id_here') {
+                showError('Please update the CLIENT_ID in the HTML file with your registered application ID.');
+                return;
+            }
+            
+            client = new KaiserPermanenteFHIRClient(CLIENT_ID, REDIRECT_URI);
+            
+            // Check if we're returning from OAuth
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('code')) {
+                await handleCallback();
+            } else if (client.restoreSession()) {
+                await loadDashboard();
+            } else {
+                showLogin();
+            }
+        });
+        
+        function showLogin() {
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('loadingSection').style.display = 'none';
+            document.getElementById('dashboardSection').style.display = 'none';
+            document.getElementById('errorSection').style.display = 'none';
+        }
+        
+        function showLoading() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('loadingSection').style.display = 'block';
+            document.getElementById('dashboardSection').style.display = 'none';
+            document.getElementById('errorSection').style.display = 'none';
+        }
+        
+        function showDashboard() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('loadingSection').style.display = 'none';
+            document.getElementById('dashboardSection').style.display = 'block';
+            document.getElementById('errorSection').style.display = 'none';
+        }
+        
+        function showError(message) {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('loadingSection').style.display = 'none';
+            document.getElementById('dashboardSection').style.display = 'none';
+            document.getElementById('errorSection').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+        }
+        
+        async function login() {
+            try {
+                await client.authorize();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+        
+        async function handleCallback() {
+            showLoading();
+            try {
+                await client.handleCallback();
+                await loadDashboard();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+        
+        async function loadDashboard() {
+            showLoading();
+            try {
+                // Load patient data
+                const patient = await client.getPatient();
+                displayPatient(patient);
+                
+                // Load health data in parallel
+                const [allergies, medications, conditions, vitals, immunizations, labs] = await Promise.all([
+                    client.getAllergies().catch(() => ({ total: 0, entry: [] })),
+                    client.getMedications('active').catch(() => ({ total: 0, entry: [] })),
+                    client.getConditions().catch(() => ({ total: 0, entry: [] })),
+                    client.getVitalSigns().catch(() => ({ total: 0, entry: [] })),
+                    client.getImmunizations().catch(() => ({ total: 0, entry: [] })),
+                    client.getLabResults().catch(() => ({ total: 0, entry: [] }))
+                ]);
+                
+                displayAllergies(allergies);
+                displayMedications(medications);
+                displayConditions(conditions);
+                displayVitals(vitals);
+                displayImmunizations(immunizations);
+                displayLabs(labs);
+                
+                showDashboard();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+        
+        function displayPatient(patient) {
+            const name = patient.name?.[0];
+            const fullName = `${name?.given?.join(' ') || ''} ${name?.family || ''}`.trim();
+            
+            document.getElementById('patientInfo').innerHTML = `
+                <h2>Patient Information</h2>
+                <p><strong>Name:</strong> ${fullName}</p>
+                <p><strong>Birth Date:</strong> ${patient.birthDate || 'N/A'}</p>
+                <p><strong>Gender:</strong> ${patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : 'N/A'}</p>
+                <p><strong>Patient ID:</strong> ${patient.id}</p>
+            `;
+        }
+        
+        function displayAllergies(data) {
+            const list = document.getElementById('allergiesList');
+            if (!data.entry || data.entry.length === 0) {
+                list.innerHTML = '<p class="empty-state">No allergies on record</p>';
+                return;
+            }
+            
+            const html = '<ul>' + data.entry.slice(0, 5).map(entry => {
+                const allergy = entry.resource;
+                return `<li>${allergy.code?.text || 'Unknown'}</li>`;
+            }).join('') + '</ul>';
+            
+            list.innerHTML = html;
+        }
+        
+        function displayMedications(data) {
+            const list = document.getElementById('medicationsList');
+            if (!data.entry || data.entry.length === 0) {
+                list.innerHTML = '<p class="empty-state">No active medications</p>';
+                return;
+            }
+            
+            const html = '<ul>' + data.entry.slice(0, 5).map(entry => {
+                const med = entry.resource;
+                return `<li>${med.medicationCodeableConcept?.text || 'Unknown'}</li>`;
+            }).join('') + '</ul>';
+            
+            list.innerHTML = html;
+        }
+        
+        function displayConditions(data) {
+            const list = document.getElementById('conditionsList');
+            if (!data.entry || data.entry.length === 0) {
+                list.innerHTML = '<p class="empty-state">No conditions on record</p>';
+                return;
+            }
+            
+            const html = '<ul>' + data.entry.slice(0, 5).map(entry => {
+                const condition = entry.resource;
+                return `<li>${condition.code?.text || 'Unknown'}</li>`;
+            }).join('') + '</ul>';
+            
+            list.innerHTML = html;
+        }
+        
+        function displayVitals(data) {
+            const list = document.getElementById('vitalsList');
+            if (!data.entry || data.entry.length === 0) {
+                list.innerHTML = '<p class="empty-state">No vital signs available</p>';
+                return;
+            }
+            
+            const html = '<ul>' + data.entry.slice(0, 5).map(entry => {
+                const obs = entry.resource;
+                const value = obs.valueQuantity;
+                return `<li>${obs.code?.text || 'Unknown'}: ${value?.value || ''} ${value?.unit || ''}</li>`;
+            }).join('') + '</ul>';
+            
+            list.innerHTML = html;
+        }
+        
+        function displayImmunizations(data) {
+            const list = document.getElementById('immunizationsList');
+            if (!data.entry || data.entry.length === 0) {
+                list.innerHTML = '<p class="empty-state">No immunization records</p>';
+                return;
+            }
+            
+            const html = '<ul>' + data.entry.slice(0, 5).map(entry => {
+                const imm = entry.resource;
+                return `<li>${imm.vaccineCode?.text || 'Unknown'}</li>`;
+            }).join('') + '</ul>';
+            
+            list.innerHTML = html;
+        }
+        
+        function displayLabs(data) {
+            const list = document.getElementById('labsList');
+            if (!data.entry || data.entry.length === 0) {
+                list.innerHTML = '<p class="empty-state">No lab results available</p>';
+                return;
+            }
+            
+            const html = '<ul>' + data.entry.slice(0, 5).map(entry => {
+                const obs = entry.resource;
+                const value = obs.valueQuantity;
+                return `<li>${obs.code?.text || 'Unknown'}: ${value?.value || ''} ${value?.unit || ''}</li>`;
+            }).join('') + '</ul>';
+            
+            list.innerHTML = html;
+        }
+        
+        function logout() {
+            client.logout();
+            showLogin();
+        }
+        
+        function retry() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>
