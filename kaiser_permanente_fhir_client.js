@@ -309,7 +309,10 @@ class KaiserPermanenteFHIRClient {
 
 /**
  * React Hook for Kaiser Permanente FHIR
+ * Note: This requires React to be loaded in your application
+ * For use with React apps that have JSX build step (Babel/Webpack)
  */
+/*
 function useKaiserPermanenteFHIR(clientId, redirectUri) {
     const [client] = React.useState(() => 
         new KaiserPermanenteFHIRClient(clientId, redirectUri)
@@ -352,127 +355,77 @@ function useKaiserPermanenteFHIR(clientId, redirectUri) {
         logout
     };
 }
+*/
 
 /**
- * Example React Component
+ * Vanilla JavaScript Example (No React Required)
+ * This works directly in browsers without a build step
  */
-function KaiserPermanenteApp() {
-    const CLIENT_ID = 'your_client_id_here';
-    const REDIRECT_URI = window.location.origin + '/callback';
+async function initializeKaiserPermanenteApp(clientId, redirectUri) {
+    const client = new KaiserPermanenteFHIRClient(clientId, redirectUri);
     
-    const { client, isAuthenticated, patient, loading, error, login, logout } = 
-        useKaiserPermanenteFHIR(CLIENT_ID, REDIRECT_URI);
-    
-    const [allergies, setAllergies] = React.useState(null);
-    const [medications, setMedications] = React.useState(null);
-    const [conditions, setConditions] = React.useState(null);
-    
-    React.useEffect(() => {
-        if (isAuthenticated && patient) {
-            // Load additional data
-            Promise.all([
-                client.getAllergies(),
-                client.getMedications('active'),
-                client.getConditions()
-            ]).then(([allergiesData, medsData, conditionsData]) => {
-                setAllergies(allergiesData);
-                setMedications(medsData);
-                setConditions(conditionsData);
-            }).catch(console.error);
+    // Check if returning from OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('code')) {
+        try {
+            await client.handleCallback();
+            // Redirect to clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (error) {
+            console.error('OAuth callback error:', error);
+            throw error;
         }
-    }, [isAuthenticated, patient, client]);
-    
-    if (loading) {
-        return <div>Loading...</div>;
     }
     
-    if (error) {
-        return <div>Error: {error.message}</div>;
-    }
+    // Restore session if available
+    const hasSession = client.restoreSession();
     
-    if (!isAuthenticated) {
-        return (
-            <div style={{ padding: '20px', textAlign: 'center' }}>
-                <h1>Kaiser Permanente Health Records</h1>
-                <button onClick={login} style={{ padding: '10px 20px', fontSize: '16px' }}>
-                    Login with Kaiser Permanente
-                </button>
-            </div>
-        );
-    }
-    
-    return (
-        <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h1>My Health Records</h1>
-                <button onClick={logout}>Logout</button>
-            </div>
+    return {
+        client,
+        isAuthenticated: hasSession,
+        async login() {
+            await client.authorize();
+        },
+        logout() {
+            client.logout();
+            window.location.reload();
+        },
+        async loadPatientData() {
+            if (!hasSession) {
+                throw new Error('Not authenticated');
+            }
             
-            {patient && (
-                <div style={{ background: '#f5f5f5', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
-                    <h2>Patient Information</h2>
-                    <p><strong>Name:</strong> {patient.name?.[0]?.given?.join(' ')} {patient.name?.[0]?.family}</p>
-                    <p><strong>Birth Date:</strong> {patient.birthDate}</p>
-                    <p><strong>Gender:</strong> {patient.gender}</p>
-                </div>
-            )}
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-                <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                    <h3>Allergies</h3>
-                    {allergies?.entry?.length > 0 ? (
-                        <ul>
-                            {allergies.entry.map(entry => (
-                                <li key={entry.resource.id}>
-                                    {entry.resource.code?.text || 'Unknown'}
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p>No allergies on record</p>
-                    )}
-                </div>
+            try {
+                const [patient, allergies, medications, conditions, vitals, labs] = await Promise.all([
+                    client.getPatient(),
+                    client.getAllergies().catch(() => ({ total: 0, entry: [] })),
+                    client.getMedications('active').catch(() => ({ total: 0, entry: [] })),
+                    client.getConditions().catch(() => ({ total: 0, entry: [] })),
+                    client.getVitalSigns().catch(() => ({ total: 0, entry: [] })),
+                    client.getLabResults().catch(() => ({ total: 0, entry: [] }))
+                ]);
                 
-                <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                    <h3>Active Medications</h3>
-                    {medications?.entry?.length > 0 ? (
-                        <ul>
-                            {medications.entry.map(entry => (
-                                <li key={entry.resource.id}>
-                                    {entry.resource.medicationCodeableConcept?.text || 'Unknown'}
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p>No active medications</p>
-                    )}
-                </div>
-                
-                <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                    <h3>Conditions</h3>
-                    {conditions?.entry?.length > 0 ? (
-                        <ul>
-                            {conditions.entry.slice(0, 5).map(entry => (
-                                <li key={entry.resource.id}>
-                                    {entry.resource.code?.text || 'Unknown'}
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p>No conditions on record</p>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
+                return {
+                    patient,
+                    allergies,
+                    medications,
+                    conditions,
+                    vitals,
+                    labs
+                };
+            } catch (error) {
+                console.error('Error loading patient data:', error);
+                throw error;
+            }
+        }
+    };
 }
 
 // Export for use in modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         KaiserPermanenteFHIRClient,
-        useKaiserPermanenteFHIR,
-        KaiserPermanenteApp,
+        initializeKaiserPermanenteApp,
         KP_CONFIG
     };
 }
